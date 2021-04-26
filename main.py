@@ -1,32 +1,45 @@
 """ Simple editor for logical schemes based qt5. """
 import sys
-from PyQt5.QtCore import QRect
+from enum import Enum
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import QRect, QSize
 from PyQt5.QtWidgets import QMainWindow, QAction, qApp, QApplication, QMessageBox, QWidget
 from PyQt5.QtGui import QIcon, QPainter, QColor, QBrush, QImage, QMouseEvent, QPaintEvent
 
 
-class Element:
-    # types of element
+class ElementTypes(Enum):
     OR = 0
     AND = 1
     NOT = 2
+    INPUT = 3
+
+
+class Element:
+    _textures = { ElementTypes.OR:QImage("images/or.bmp"),
+                  ElementTypes.AND:QImage("images/and.bmp"),
+                  ElementTypes.NOT:QImage("images/not.bmp"),
+                  ElementTypes.INPUT:QImage("images/input.png") }
 
     def __init__(self, element_type, x, y):
         self.x = x
         self.y = y
-        self.width = 100
-        self.height = 100
+        if element_type == ElementTypes.INPUT:
+            self.width = 30
+            self.height = 30
+        else:
+            self.width = 80
+            self.height = 80
         self.element_type = element_type
 
     def draw(self, qpainter):
         """ Draw Element. """
-        qpainter.drawImage(QRect(self.x, self.y, self.width, self.height), QImage("images/AND2.bmp"))
+        qpainter.drawImage(QRect(self.x, self.y, self.width, self.height), Element._textures[self.element_type])
 
 
 class Circuit(QWidget):
     def __init__(self):
         super(Circuit, self).__init__()
-        self.elements = [Element(Element.AND, 10, 10)]
+        self.elements = [Element(ElementTypes.INPUT, 10, 10)]
         self.selected_element = -1
         self.selected_element_dpos = [0, 0]
 
@@ -76,16 +89,20 @@ class MainWindow(QMainWindow):
         print("Run circuit")
 
     def add_operator_not(self):
-        print("add operator not")
+        self.circuit.elements.append(Element(ElementTypes.NOT, 10, 10))
+        self.repaint()
 
     def add_operator_or(self):
-        print("add operator or")
+        self.circuit.elements.append(Element(ElementTypes.OR, 10, 10))
+        self.repaint()
 
     def add_operator_and(self):
-        print("add operator and")
+        self.circuit.elements.append(Element(ElementTypes.AND, 10, 10))
+        self.repaint()
 
     def add_input(self):
-        print("add input")
+        self.circuit.elements.append(Element(ElementTypes.INPUT, 10, 10))
+        self.repaint()
 
     def new_project(self):
         print("New Project")
@@ -152,40 +169,43 @@ class MainWindow(QMainWindow):
         about_menu.addAction(about_action)
 
     def _create_tool_bar(self):
-        run_action = QAction('Run', self)
+        run_action = QAction(QIcon("images/run.png"), 'Run', self)
         run_action.setShortcut('Ctrl+R')
         run_action.triggered.connect(self.run_circuit)
 
-        and_action = QAction('and', self)
+        and_action = QAction(QIcon("images/and.bmp"), 'and', self)
         and_action.setShortcut('Ctrl+A')
         and_action.triggered.connect(self.add_operator_and)
 
-        or_action = QAction('or', self)
+        or_action = QAction(QIcon("images/or.bmp"), 'or', self)
         or_action.setShortcut('Ctrl+R')
         or_action.triggered.connect(self.add_operator_or)
 
-        not_action = QAction('not', self)
+        not_action = QAction(QIcon("images/not.bmp"), 'not', self)
         not_action.setShortcut('Ctrl+N')
         not_action.triggered.connect(self.add_operator_not)
 
-        input_action = QAction('input', self)
+        input_action = QAction(QIcon("images/input.png"), 'input', self)
         input_action.setShortcut('Ctrl+I')
         input_action.triggered.connect(self.add_input)
 
         self.toolbar = self.addToolBar('Tools')
+        self.toolbar.setIconSize(QSize(40, 40))
         self.toolbar.addAction(run_action)
+        self.toolbar.addSeparator()
         self.toolbar.addAction(input_action)
         self.toolbar.addAction(and_action)
         self.toolbar.addAction(or_action)
         self.toolbar.addAction(not_action)
+        self.addToolBar(QtCore.Qt.ToolBarArea_Mask, self.toolbar)
 
     def _create_ui(self):
         self.setWindowTitle("Combinational Circuit Editor")
         self.resize(800, 600)
         self._create_menu_bar()
         self._create_tool_bar()
-        self.scheme = Circuit()
-        self.setCentralWidget(self.scheme)
+        self.circuit = Circuit()
+        self.setCentralWidget(self.circuit)
         self.statusBar()
 
 
