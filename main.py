@@ -1,15 +1,20 @@
 """ Simple editor for logical schemes based qt5. """
 import sys
-from PyQt5.QtWidgets import QMainWindow, QAction, qApp, QApplication, QMessageBox
-from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QMainWindow, QAction, qApp, QApplication, QMessageBox, QWidget
+from PyQt5.QtGui import QIcon, QPainter, QColor, QBrush
 
 
 class Element:
     pass
 
 
-class Scheme:
-    pass
+class Scheme(QWidget):
+    def paintEvent(self, event):
+         qp = QPainter()
+         qp.begin(self)
+         qp.setBackground(QBrush(QColor(255, 255, 255)))
+         qp.fillRect(20, 20, 100, 100, QBrush(QColor(10, 10, 10)))
+         qp.end()
 
 
 class MainWindow(QMainWindow):
@@ -18,6 +23,21 @@ class MainWindow(QMainWindow):
 
         self._create_ui()
         self.show()
+
+    def run_circuit(self):
+        print("Run circuit")
+
+    def add_operator_not(self):
+        print("add operator not")
+
+    def add_operator_or(self):
+        print("add operator or")
+
+    def add_operator_and(self):
+        print("add operator and")
+
+    def add_input(self):
+        print("add input")
 
     def new_project(self):
         print("New Project")
@@ -84,16 +104,41 @@ class MainWindow(QMainWindow):
         about_menu.addAction(about_action)
 
     def _create_tool_bar(self):
-        pass
+        run_action = QAction('Run', self)
+        run_action.setShortcut('Ctrl+R')
+        run_action.triggered.connect(self.run_circuit)
+
+        and_action = QAction('and', self)
+        and_action.setShortcut('Ctrl+A')
+        and_action.triggered.connect(self.add_operator_and)
+
+        or_action = QAction('or', self)
+        or_action.setShortcut('Ctrl+R')
+        or_action.triggered.connect(self.add_operator_or)
+
+        not_action = QAction('not', self)
+        not_action.setShortcut('Ctrl+N')
+        not_action.triggered.connect(self.add_operator_not)
+
+        input_action = QAction('input', self)
+        input_action.setShortcut('Ctrl+I')
+        input_action.triggered.connect(self.add_input)
+
+        self.toolbar = self.addToolBar('Tools')
+        self.toolbar.addAction(run_action)
+        self.toolbar.addAction(input_action)
+        self.toolbar.addAction(and_action)
+        self.toolbar.addAction(or_action)
+        self.toolbar.addAction(not_action)
 
     def _create_ui(self):
         self.setWindowTitle("Combinational Circuit Editor")
         self.resize(800, 600)
         self._create_menu_bar()
         self._create_tool_bar()
+        self.scheme = Scheme()
+        self.setCentralWidget(self.scheme)
         self.statusBar()
-
-
 
 
 if __name__ == "__main__":
