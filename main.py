@@ -1,20 +1,68 @@
 """ Simple editor for logical schemes based qt5. """
 import sys
+from PyQt5.QtCore import QRect
 from PyQt5.QtWidgets import QMainWindow, QAction, qApp, QApplication, QMessageBox, QWidget
-from PyQt5.QtGui import QIcon, QPainter, QColor, QBrush
+from PyQt5.QtGui import QIcon, QPainter, QColor, QBrush, QImage, QMouseEvent, QPaintEvent
 
 
 class Element:
-    pass
+    # types of element
+    OR = 0
+    AND = 1
+    NOT = 2
+
+    def __init__(self, element_type, x, y):
+        self.x = x
+        self.y = y
+        self.width = 100
+        self.height = 100
+        self.element_type = element_type
+
+    def draw(self, qpainter):
+        """ Draw Element. """
+        qpainter.drawImage(QRect(self.x, self.y, self.width, self.height), QImage("images/AND2.bmp"))
 
 
-class Scheme(QWidget):
-    def paintEvent(self, event):
-         qp = QPainter()
-         qp.begin(self)
-         qp.setBackground(QBrush(QColor(255, 255, 255)))
-         qp.fillRect(20, 20, 100, 100, QBrush(QColor(10, 10, 10)))
-         qp.end()
+class Circuit(QWidget):
+    def __init__(self):
+        super(Circuit, self).__init__()
+        self.elements = [Element(Element.AND, 10, 10)]
+        self.selected_element = -1
+        self.selected_element_dpos = [0, 0]
+
+    def paintEvent(self, a0: QPaintEvent) -> None:
+        """ Draw elements. """
+        qp = QPainter()
+        qp.begin(self)
+        qp.setBackground(QBrush(QColor(255, 255, 255)))
+        for element in self.elements:
+            element.draw(qp)
+        qp.end()
+
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        """ Select element to move. """
+        x, y = a0.x(), a0.y()
+        for i in range(len(self.elements)):
+            if self.elements[i].x <= x <= self.elements[i].x + self.elements[i].width and \
+                    self.elements[i].y <= y <= self.elements[i].y + self.elements[i].height:
+                self.selected_element = i
+                self.selected_element_dpos[0] = x - self.elements[i].x
+                self.selected_element_dpos[1] = y - self.elements[i].y
+                break
+        super().mousePressEvent(a0)
+
+    def mouseMoveEvent(self, a0: QMouseEvent) -> None:
+        """ Move selected element. """
+        if self.selected_element > -1:
+            i = self.selected_element
+            self.elements[i].x = a0.x() - self.selected_element_dpos[0]
+            self.elements[i].y = a0.y() - self.selected_element_dpos[1]
+            self.repaint()
+        super().mouseMoveEvent(a0)
+
+    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
+        """ Stop moving selected element. """
+        self.selected_element = -1
 
 
 class MainWindow(QMainWindow):
@@ -136,7 +184,7 @@ class MainWindow(QMainWindow):
         self.resize(800, 600)
         self._create_menu_bar()
         self._create_tool_bar()
-        self.scheme = Scheme()
+        self.scheme = Circuit()
         self.setCentralWidget(self.scheme)
         self.statusBar()
 
@@ -145,4 +193,3 @@ if __name__ == "__main__":
     boolean_editor = QApplication(sys.argv)
     window = MainWindow()
     boolean_editor.exec()
-
