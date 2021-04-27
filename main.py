@@ -34,26 +34,33 @@ class Circuit(QWidget):
         qp.setPen(QtGui.QPen(QtCore.Qt.black, 2))
         qp.setBackground(QBrush(QColor(255, 255, 255)))
         for element in self.elements:
-            element.draw(qp)
-            # Draw lines
-            if element.connections["i1"] > -1:
-                qp.drawLine(self.elements[element.connections["i1"]].x + self.elements[element.connections["i1"]].width,
-                            self.elements[element.connections["i1"]].y + self.elements[element.connections["i1"]].height // 4,
-                            element.x,
-                            element.y + element.height // 4,)
-            if element.connections["i2"] > -1:
-                qp.drawLine(self.elements[element.connections["i2"]].x + self.elements[element.connections["i2"]].width,
-                            self.elements[element.connections["i2"]].y + self.elements[element.connections["i2"]].height // 4,
-                            element.x,
-                            element.y + 3 * element.height // 4)
-            if self.is_ctrl:
-                qp.drawImage(element.x - 15, element.y + element.height // 4 - 15,
-                             self.add_connection_img if element.connections["i1"] == -1 else self.rem_connection_img)
-                qp.drawImage(element.x + element.width - 15, element.y + element.height // 4 - 15,
-                             self.add_connection_img if element.connections["o"] == -1 else self.rem_connection_img)
-                if element.element_type != ElementTypes.NOT:
-                    qp.drawImage(element.x - 15, element.y + 3 * element.height // 4 - 15,
-                                 self.add_connection_img if element.connections["i2"] == -1 else self.rem_connection_img)
+            if element is not None:
+                element.draw(qp)
+                # Draw lines
+                if element.connections["i1"] > -1:
+                    qp.drawLine(
+                        self.elements[element.connections["i1"]].x + self.elements[element.connections["i1"]].width,
+                        self.elements[element.connections["i1"]].y + self.elements[
+                            element.connections["i1"]].height // 4,
+                        element.x,
+                        element.y + element.height // 4, )
+                if element.connections["i2"] > -1:
+                    qp.drawLine(
+                        self.elements[element.connections["i2"]].x + self.elements[element.connections["i2"]].width,
+                        self.elements[element.connections["i2"]].y + self.elements[
+                            element.connections["i2"]].height // 4,
+                        element.x,
+                        element.y + 3 * element.height // 4)
+                if self.is_ctrl:
+                    qp.drawImage(element.x - 15, element.y + element.height // 4 - 15,
+                                 self.add_connection_img if element.connections[
+                                                                "i1"] == -1 else self.rem_connection_img)
+                    qp.drawImage(element.x + element.width - 15, element.y + element.height // 4 - 15,
+                                 self.add_connection_img if element.connections["o"] == -1 else self.rem_connection_img)
+                    if element.element_type != ElementTypes.NOT:
+                        qp.drawImage(element.x - 15, element.y + 3 * element.height // 4 - 15,
+                                     self.add_connection_img if element.connections[
+                                                                    "i2"] == -1 else self.rem_connection_img)
 
         qp.end()
 
@@ -66,16 +73,27 @@ class Circuit(QWidget):
         is_find = False
         x, y = a0.x(), a0.y()
         for i in range(len(self.elements)):
-            if self.elements[i].x <= x <= self.elements[i].x + self.elements[i].width and \
-                    self.elements[i].y <= y <= self.elements[i].y + self.elements[i].height:
-                if not self.is_ctrl:
-                    # Select element
-                    if self.selected_element > -1:
-                        self.elements[self.selected_element].state = ElementState.DEFAULT
-                    self.selected_element = i
-                    self.elements[self.selected_element].state = ElementState.CHOOSING
-                is_find = True
-                break
+            if self.elements[i] is not None:
+                if self.elements[i].x <= x <= self.elements[i].x + self.elements[i].width and \
+                        self.elements[i].y <= y <= self.elements[i].y + self.elements[i].height:
+                    if self.is_ctrl:
+                        # Check for add connection
+                        if abs(self.elements[i].x - x) < 15 and abs(self.elements[i].y + self.elements[i].height // 4 - y) < 15:
+                            print("i1")
+                        if self.elements[i].element_type != ElementTypes.NOT and abs(self.elements[i].x - x) < 15 and \
+                                abs(self.elements[i].y + 3 * self.elements[i].height // 4 - y) < 15:
+                            print("i2")
+                        if abs(self.elements[i].x + self.elements[i].width - x) < 15 and \
+                            abs(self.elements[i].y + self.elements[i].height // 4 - y) < 15:
+                            print("o")
+                    else:
+                        # Select element
+                        if self.selected_element > -1:
+                            self.elements[self.selected_element].state = ElementState.DEFAULT
+                        self.selected_element = i
+                        self.elements[self.selected_element].state = ElementState.CHOOSING
+                    is_find = True
+                    break
 
         if not is_find and self.selected_element > -1 and not self.is_ctrl:
             self.elements[self.selected_element].state = ElementState.DEFAULT
@@ -94,14 +112,26 @@ class Circuit(QWidget):
             self.elements[i].x = a0.x() - self.selected_element_dpos[0]
             self.elements[i].y = a0.y() - self.selected_element_dpos[1]
             self.repaint()
-        super().mouseMoveEvent(a0)
+        #super().mouseMoveEvent(a0)
 
     def keyPressEvent(self, a0: QtGui.QKeyEvent) -> None:
         if a0.key() == QtCore.Qt.Key_Delete:
+            # Delete selected element
             if self.selected_element > -1:
-                self.elements.pop(self.selected_element)
-                self.repaint()
+                i = self.selected_element
+                if self.elements[i].connections['i1'] != -1:
+                    self.elements[self.elements[i].connections['i1']].connections['o'] = -1
+                if self.elements[i].connections['i2'] != -1:
+                    self.elements[self.elements[i].connections['i2']].connections['o'] = -1
+                if self.elements[i].connections['o'] != -1:
+                    if self.elements[self.elements[i].connections['o']].connections['i1'] == i:
+                        self.elements[self.elements[i].connections['o']].connections['i1'] = -1
+                    else:
+                        self.elements[self.elements[i].connections['o']].connections['i1'] = -1
+                self.elements[i] = None
                 self.selected_element = -1
+                self.repaint()
+
         elif a0.key() == QtCore.Qt.Key_Control:
             self.is_ctrl = True
         self.repaint()
@@ -112,6 +142,17 @@ class Circuit(QWidget):
             self.is_ctrl = False
         self.repaint()
         super().keyPressEvent(a0)
+
+    def add_element(self, element_type):
+        is_added = False
+        for i in range(len(self.elements)):
+            if self.elements[i] is None:
+                self.elements[i] = Element(element_type, 20, 20)
+                is_added = True
+                break
+        if not is_added:
+            self.elements.append(Element(element_type, 20, 20))
+        self.repaint()
 
 
 class MainWindow(QMainWindow):
@@ -125,20 +166,16 @@ class MainWindow(QMainWindow):
         print("Run circuit")
 
     def add_operator_not(self):
-        self.circuit.elements.append(Element(ElementTypes.NOT, 10, 10))
-        self.repaint()
+        self.circuit.add_element(ElementTypes.NOT)
 
     def add_operator_or(self):
-        self.circuit.elements.append(Element(ElementTypes.OR, 10, 10))
-        self.repaint()
+        self.circuit.add_element(ElementTypes.OR)
 
     def add_operator_and(self):
-        self.circuit.elements.append(Element(ElementTypes.AND, 10, 10))
-        self.repaint()
+        self.circuit.add_element(ElementTypes.AND)
 
     def add_input(self):
-        self.circuit.elements.append(Element(ElementTypes.INPUT, 10, 10))
-        self.repaint()
+        self.circuit.add_element(ElementTypes.INPUT)
 
     def new_project(self):
         print("New Project")
@@ -252,7 +289,9 @@ class MainWindow(QMainWindow):
         self.circuit.keyReleaseEvent(a0)
         super().keyPressEvent(a0)
 
+
 if __name__ == "__main__":
     boolean_editor = QApplication(sys.argv)
+    boolean_editor.setWindowIcon(QIcon("images/run.png"))
     window = MainWindow()
     boolean_editor.exec()
