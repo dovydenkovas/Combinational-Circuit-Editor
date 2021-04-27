@@ -1,39 +1,18 @@
 """ Simple editor for logical schemes based qt5. """
 import sys
-from enum import Enum
-from PyQt5 import QtCore, QtWidgets
+
+from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import QRect, QSize
 from PyQt5.QtWidgets import QMainWindow, QAction, qApp, QApplication, QMessageBox, QWidget
 from PyQt5.QtGui import QIcon, QPainter, QColor, QBrush, QImage, QMouseEvent, QPaintEvent
 
-
-class ElementTypes(Enum):
-    OR = 0
-    AND = 1
-    NOT = 2
-    INPUT = 3
+from elements import *
 
 
-class Element:
-    _textures = { ElementTypes.OR:QImage("images/or.bmp"),
-                  ElementTypes.AND:QImage("images/and.bmp"),
-                  ElementTypes.NOT:QImage("images/not.bmp"),
-                  ElementTypes.INPUT:QImage("images/input.png") }
-
-    def __init__(self, element_type, x, y):
-        self.x = x
-        self.y = y
-        if element_type == ElementTypes.INPUT:
-            self.width = 30
-            self.height = 30
-        else:
-            self.width = 80
-            self.height = 80
-        self.element_type = element_type
-
-    def draw(self, qpainter):
-        """ Draw Element. """
-        qpainter.drawImage(QRect(self.x, self.y, self.width, self.height), Element._textures[self.element_type])
+class Line:
+    def __init__(self):
+        self.coordinates = []
+        self.is_active = False
 
 
 class Circuit(QWidget):
@@ -76,6 +55,14 @@ class Circuit(QWidget):
     def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
         """ Stop moving selected element. """
         self.selected_element = -1
+
+    def keyPressEvent(self, a0: QtGui.QKeyEvent) -> None:
+        if a0.key() == QtCore.Qt.Key_Delete:
+            if self.selected_element > -1:
+                self.elements.pop(self.selected_element)
+                self.repaint()
+                self.selected_element = -1
+        super().keyPressEvent(a0)
 
 
 class MainWindow(QMainWindow):
@@ -197,7 +184,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(and_action)
         self.toolbar.addAction(or_action)
         self.toolbar.addAction(not_action)
-        self.addToolBar(QtCore.Qt.ToolBarArea_Mask, self.toolbar)
+        self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolbar)
 
     def _create_ui(self):
         self.setWindowTitle("Combinational Circuit Editor")
@@ -208,6 +195,9 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.circuit)
         self.statusBar()
 
+    def keyPressEvent(self, a0: QtGui.QKeyEvent) -> None:
+        self.circuit.keyPressEvent(a0)
+        super().keyPressEvent(a0)
 
 if __name__ == "__main__":
     boolean_editor = QApplication(sys.argv)
