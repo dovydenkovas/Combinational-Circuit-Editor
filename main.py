@@ -18,11 +18,14 @@ class Line:
 class Circuit(QWidget):
     def __init__(self):
         super(Circuit, self).__init__()
-        self.elements = [Element(ElementTypes.OR, 40, 40), Element(ElementTypes.AND, 300, 40)]
-        self.elements[1].input_id_1 = 0
+        self.elements = [Element(ElementTypes.OR, 40, 40), Element(ElementTypes.AND, 200, 40), Element(ElementTypes.NOT, 400, 40)]
+        self.connect(0, "o", 1, "i2")
+        self.connect(1, "o", 2, "i1")
         self.selected_element = -1
         self.selected_element_dpos = [0, 0]
         self.is_ctrl = False
+        self.add_connection_img = QImage("images/add_connection.png")
+        self.rem_connection_img = QImage("images/rem_connection.png")
 
     def paintEvent(self, a0: QPaintEvent) -> None:
         """ Draw elements. """
@@ -33,35 +36,46 @@ class Circuit(QWidget):
         for element in self.elements:
             element.draw(qp)
             # Draw lines
-            if element.input_id_1 > -1:
-                qp.drawLine(self.elements[element.input_id_1].x + self.elements[element.input_id_1].width,
-                            self.elements[element.input_id_1].y + self.elements[element.input_id_1].height // 4,
+            if element.connections["i1"] > -1:
+                qp.drawLine(self.elements[element.connections["i1"]].x + self.elements[element.connections["i1"]].width,
+                            self.elements[element.connections["i1"]].y + self.elements[element.connections["i1"]].height // 4,
                             element.x,
                             element.y + element.height // 4,)
-            if element.input_id_2 > -1:
-                qp.drawLine(self.elements[element.input_id_1].x + self.elements[element.input_id_1].width,
-                            self.elements[element.input_id_1].y + self.elements[element.input_id_1].height // 4,
+            if element.connections["i2"] > -1:
+                qp.drawLine(self.elements[element.connections["i2"]].x + self.elements[element.connections["i2"]].width,
+                            self.elements[element.connections["i2"]].y + self.elements[element.connections["i2"]].height // 4,
                             element.x,
                             element.y + 3 * element.height // 4)
+            if self.is_ctrl:
+                qp.drawImage(element.x - 15, element.y + element.height // 4 - 15,
+                             self.add_connection_img if element.connections["i1"] == -1 else self.rem_connection_img)
+                qp.drawImage(element.x + element.width - 15, element.y + element.height // 4 - 15,
+                             self.add_connection_img if element.connections["o"] == -1 else self.rem_connection_img)
+                if element.element_type != ElementTypes.NOT:
+                    qp.drawImage(element.x - 15, element.y + 3 * element.height // 4 - 15,
+                                 self.add_connection_img if element.connections["i2"] == -1 else self.rem_connection_img)
+
         qp.end()
+
+    def connect(self, id1, port1, id2, port2):
+        self.elements[id1].connections[port1] = id2
+        self.elements[id2].connections[port2] = id1
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
         """ Select element to move. """
         is_find = False
         x, y = a0.x(), a0.y()
-        if self.is_ctrl:
-            # Select element
-            for i in range(len(self.elements)):
-                if self.elements[i].x <= x <= self.elements[i].x + self.elements[i].width and \
-                        self.elements[i].y <= y <= self.elements[i].y + self.elements[i].height:
+        for i in range(len(self.elements)):
+            if self.elements[i].x <= x <= self.elements[i].x + self.elements[i].width and \
+                    self.elements[i].y <= y <= self.elements[i].y + self.elements[i].height:
+                if not self.is_ctrl:
+                    # Select element
                     if self.selected_element > -1:
                         self.elements[self.selected_element].state = ElementState.DEFAULT
                     self.selected_element = i
                     self.elements[self.selected_element].state = ElementState.CHOOSING
-                    is_find = True
-                    break
-        else:
-            pass
+                is_find = True
+                break
 
         if not is_find and self.selected_element > -1 and not self.is_ctrl:
             self.elements[self.selected_element].state = ElementState.DEFAULT
@@ -75,7 +89,7 @@ class Circuit(QWidget):
 
     def mouseMoveEvent(self, a0: QMouseEvent) -> None:
         """ Move selected element. """
-        if self.is_ctrl and self.selected_element > -1:
+        if not self.is_ctrl and self.selected_element > -1:
             i = self.selected_element
             self.elements[i].x = a0.x() - self.selected_element_dpos[0]
             self.elements[i].y = a0.y() - self.selected_element_dpos[1]
@@ -90,11 +104,13 @@ class Circuit(QWidget):
                 self.selected_element = -1
         elif a0.key() == QtCore.Qt.Key_Control:
             self.is_ctrl = True
+        self.repaint()
         super().keyPressEvent(a0)
 
     def keyReleaseEvent(self, a0: QtGui.QKeyEvent) -> None:
         if a0.key() == QtCore.Qt.Key_Control:
             self.is_ctrl = False
+        self.repaint()
         super().keyPressEvent(a0)
 
 

@@ -37,9 +37,8 @@ class Element:
         self.y = y
         self.state = ElementState.DEFAULT
 
-        self.input_id_1 = -1
-        self.input_id_2 = -1
-        self.output_id = -1
+        self.connections = {"i1": -1, "i2": -1, "o": -1}
+
         if element_type == ElementTypes.INPUT:
             self.width = 30
             self.height = 30
