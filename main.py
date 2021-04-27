@@ -18,43 +18,69 @@ class Line:
 class Circuit(QWidget):
     def __init__(self):
         super(Circuit, self).__init__()
-        self.elements = [Element(ElementTypes.INPUT, 10, 10)]
+        self.elements = [Element(ElementTypes.OR, 40, 40), Element(ElementTypes.AND, 300, 40)]
+        self.elements[1].input_id_1 = 0
         self.selected_element = -1
         self.selected_element_dpos = [0, 0]
+        self.is_ctrl = False
 
     def paintEvent(self, a0: QPaintEvent) -> None:
         """ Draw elements. """
         qp = QPainter()
         qp.begin(self)
+        qp.setPen(QtGui.QPen(QtCore.Qt.black, 2))
         qp.setBackground(QBrush(QColor(255, 255, 255)))
         for element in self.elements:
             element.draw(qp)
+            # Draw lines
+            if element.input_id_1 > -1:
+                qp.drawLine(self.elements[element.input_id_1].x + self.elements[element.input_id_1].width,
+                            self.elements[element.input_id_1].y + self.elements[element.input_id_1].height // 4,
+                            element.x,
+                            element.y + element.height // 4,)
+            if element.input_id_2 > -1:
+                qp.drawLine(self.elements[element.input_id_1].x + self.elements[element.input_id_1].width,
+                            self.elements[element.input_id_1].y + self.elements[element.input_id_1].height // 4,
+                            element.x,
+                            element.y + 3 * element.height // 4)
         qp.end()
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
         """ Select element to move. """
+        is_find = False
         x, y = a0.x(), a0.y()
-        for i in range(len(self.elements)):
-            if self.elements[i].x <= x <= self.elements[i].x + self.elements[i].width and \
-                    self.elements[i].y <= y <= self.elements[i].y + self.elements[i].height:
-                self.selected_element = i
-                self.selected_element_dpos[0] = x - self.elements[i].x
-                self.selected_element_dpos[1] = y - self.elements[i].y
-                break
+        if self.is_ctrl:
+            # Select element
+            for i in range(len(self.elements)):
+                if self.elements[i].x <= x <= self.elements[i].x + self.elements[i].width and \
+                        self.elements[i].y <= y <= self.elements[i].y + self.elements[i].height:
+                    if self.selected_element > -1:
+                        self.elements[self.selected_element].state = ElementState.DEFAULT
+                    self.selected_element = i
+                    self.elements[self.selected_element].state = ElementState.CHOOSING
+                    is_find = True
+                    break
+        else:
+            pass
+
+        if not is_find and self.selected_element > -1 and not self.is_ctrl:
+            self.elements[self.selected_element].state = ElementState.DEFAULT
+            self.selected_element = -1
+
+        if self.selected_element > -1:
+            self.selected_element_dpos[0] = a0.x() - self.elements[self.selected_element].x
+            self.selected_element_dpos[1] = a0.y() - self.elements[self.selected_element].y
+        self.repaint()
         super().mousePressEvent(a0)
 
     def mouseMoveEvent(self, a0: QMouseEvent) -> None:
         """ Move selected element. """
-        if self.selected_element > -1:
+        if self.is_ctrl and self.selected_element > -1:
             i = self.selected_element
             self.elements[i].x = a0.x() - self.selected_element_dpos[0]
             self.elements[i].y = a0.y() - self.selected_element_dpos[1]
             self.repaint()
         super().mouseMoveEvent(a0)
-
-    def mouseReleaseEvent(self, a0: QMouseEvent) -> None:
-        """ Stop moving selected element. """
-        self.selected_element = -1
 
     def keyPressEvent(self, a0: QtGui.QKeyEvent) -> None:
         if a0.key() == QtCore.Qt.Key_Delete:
@@ -62,6 +88,13 @@ class Circuit(QWidget):
                 self.elements.pop(self.selected_element)
                 self.repaint()
                 self.selected_element = -1
+        elif a0.key() == QtCore.Qt.Key_Control:
+            self.is_ctrl = True
+        super().keyPressEvent(a0)
+
+    def keyReleaseEvent(self, a0: QtGui.QKeyEvent) -> None:
+        if a0.key() == QtCore.Qt.Key_Control:
+            self.is_ctrl = False
         super().keyPressEvent(a0)
 
 
@@ -197,6 +230,10 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, a0: QtGui.QKeyEvent) -> None:
         self.circuit.keyPressEvent(a0)
+        super().keyPressEvent(a0)
+
+    def keyReleaseEvent(self, a0: QtGui.QKeyEvent) -> None:
+        self.circuit.keyReleaseEvent(a0)
         super().keyPressEvent(a0)
 
 if __name__ == "__main__":
