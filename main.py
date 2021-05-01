@@ -10,8 +10,9 @@ from elements import *
 
 
 class Line:
-    def __init__(self):
-        self.coordinates = []
+    def __init__(self, element_1, element_2, port_1, port_2):
+        self.elements = [element_1, element_2]
+        self.ports = [port_1, port_2]
         self.is_active = False
 
 
@@ -19,8 +20,9 @@ class Circuit(QWidget):
     def __init__(self):
         super(Circuit, self).__init__()
         self.elements = [Element(ElementTypes.OR, 40, 40), Element(ElementTypes.AND, 200, 40), Element(ElementTypes.NOT, 400, 40)]
-        self.connect(0, "o", 1, "i2")
-        self.connect(1, "o", 2, "i1")
+        self.lines = []
+        self.add_connection(0, "o", 1, "i2")
+        self.add_connection(1, "o", 2, "i1")
         self.selected_element = -1
         self.selected_element_dpos = [0, 0]
         self.is_ctrl = False
@@ -37,20 +39,20 @@ class Circuit(QWidget):
             if element is not None:
                 element.draw(qp)
                 # Draw lines
-                if element.connections["i1"] > -1:
-                    qp.drawLine(
-                        self.elements[element.connections["i1"]].x + self.elements[element.connections["i1"]].width,
-                        self.elements[element.connections["i1"]].y + self.elements[
-                            element.connections["i1"]].height // 4,
-                        element.x,
-                        element.y + element.height // 4, )
-                if element.connections["i2"] > -1:
-                    qp.drawLine(
-                        self.elements[element.connections["i2"]].x + self.elements[element.connections["i2"]].width,
-                        self.elements[element.connections["i2"]].y + self.elements[
-                            element.connections["i2"]].height // 4,
-                        element.x,
-                        element.y + 3 * element.height // 4)
+                # if element.connections["i1"] > -1:
+                #     qp.drawLine(
+                #         self.elements[element.connections["i1"]].x + self.elements[element.connections["i1"]].width,
+                #         self.elements[element.connections["i1"]].y + self.elements[
+                #             element.connections["i1"]].height // 4,
+                #         element.x,
+                #         element.y + element.height // 4, )
+                # if element.connections["i2"] > -1:
+                #     qp.drawLine(
+                #         self.elements[element.connections["i2"]].x + self.elements[element.connections["i2"]].width,
+                #         self.elements[element.connections["i2"]].y + self.elements[
+                #             element.connections["i2"]].height // 4,
+                #         element.x,
+                #         element.y + 3 * element.height // 4)
                 if self.is_ctrl:
                     qp.drawImage(element.x - 15, element.y + element.height // 4 - 15,
                                  self.add_connection_img if element.connections[
@@ -61,12 +63,47 @@ class Circuit(QWidget):
                         qp.drawImage(element.x - 15, element.y + 3 * element.height // 4 - 15,
                                      self.add_connection_img if element.connections[
                                                                     "i2"] == -1 else self.rem_connection_img)
+        for line in self.lines:
+            if line is not None:
+                id_1 = line.elements[0]
+                port_1 = line.ports[0]
+                point_1 = self.elements[id_1].get_connection_point(port_1)
 
+                id_2 = line.elements[1]
+                port_2 = line.ports[1]
+                point_2 = self.elements[id_2].get_connection_point(port_2)
+
+                qp.drawLine(*point_1, point_1[0], point_2[1])
+                qp.drawLine(point_1[0], point_2[1], *point_2)
         qp.end()
 
-    def connect(self, id1, port1, id2, port2):
-        self.elements[id1].connections[port1] = id2
-        self.elements[id2].connections[port2] = id1
+    def add_connection(self, id1, port1, id2, port2):
+        is_added = False
+        line = Line(id1, id2, port1, port2)
+        line_id = len(self.lines) - 1
+
+        for i in range(len(self.lines)):
+            if self.lines[i] is None:
+                self.lines[i] = line
+                line_id = i
+                is_added = True
+                break
+        if not is_added:
+            self.lines.append(line)
+
+        self.elements[id1].connections[port1] = line_id
+        self.elements[id2].connections[port2] = line_id
+        self.repaint()
+
+    def remove_connection(self, element_id, port):
+        """ Delete line between elements """
+        line_id = self.elements[element_id].connections[port]
+        id = self.lines[line_id].elements[0]
+        second_element_id = id if id != element_id else self.lines[line_id].elements[1]
+        second_element_port = self.lines[line_id].ports[0] if id != element_id else self.lines[line_id].ports[1]
+        self.elements[element_id].connections[port] = -1
+        self.elements[second_element_id].connections[second_element_port] = -1
+        self.lines[line_id] = None
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
         """ Check for trying select object or create/remove connection. """
@@ -129,14 +166,11 @@ class Circuit(QWidget):
             if self.selected_element > -1:
                 i = self.selected_element
                 if self.elements[i].connections['i1'] != -1:
-                    self.elements[self.elements[i].connections['i1']].connections['o'] = -1
+                    self.remove_connection(self.selected_element, 'i1')
                 if self.elements[i].connections['i2'] != -1:
-                    self.elements[self.elements[i].connections['i2']].connections['o'] = -1
+                    self.remove_connection(self.selected_element, 'i2')
                 if self.elements[i].connections['o'] != -1:
-                    if self.elements[self.elements[i].connections['o']].connections['i1'] == i:
-                        self.elements[self.elements[i].connections['o']].connections['i1'] = -1
-                    else:
-                        self.elements[self.elements[i].connections['o']].connections['i1'] = -1
+                    self.remove_connection(self.selected_element, 'o')
                 self.elements[i] = None
                 self.selected_element = -1
                 self.repaint()

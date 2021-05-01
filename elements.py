@@ -52,4 +52,11 @@ class Element:
         """ Draw Element. """
         qpainter.drawImage(QRect(self.x, self.y, self.width, self.height), Element._textures[self.element_type][self.state])
 
+    def get_connection_point(self, port):
+        """ Calculate port position """
+        point = [0, 0]
+        point[0] = self.x if 'i' in port else self.x + self.width
+        point[1] = self.y + self.height // 4 * (3 if '2' in port else 1)
+        return point
+
 
