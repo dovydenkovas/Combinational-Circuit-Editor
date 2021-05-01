@@ -69,39 +69,48 @@ class Circuit(QWidget):
         self.elements[id2].connections[port2] = id1
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
-        """ Select element to move. """
+        """ Check for trying select object or create/remove connection. """
         is_find = False
         x, y = a0.x(), a0.y()
         for i in range(len(self.elements)):
             if self.elements[i] is not None:
-                if self.elements[i].x <= x <= self.elements[i].x + self.elements[i].width and \
+                if self.is_ctrl:
+                    # Check for add or remove connection
+                    if abs(self.elements[i].x - x) < 15 and abs(self.elements[i].y + self.elements[i].height // 4 - y) < 15:
+                        # input 1
+                        print("i1")
+                        is_find = True
+                    if self.elements[i].element_type != ElementTypes.NOT and abs(self.elements[i].x - x) < 15 and \
+                            abs(self.elements[i].y + 3 * self.elements[i].height // 4 - y) < 15:
+                        # input 2
+                        print("i2")
+                        is_find = True
+                    if abs(self.elements[i].x + self.elements[i].width - x) < 15 and \
+                        abs(self.elements[i].y + self.elements[i].height // 4 - y) < 15:
+                        # output
+                        print("o")
+                        is_find = True
+                elif self.elements[i].x <= x <= self.elements[i].x + self.elements[i].width and \
                         self.elements[i].y <= y <= self.elements[i].y + self.elements[i].height:
-                    if self.is_ctrl:
-                        # Check for add connection
-                        if abs(self.elements[i].x - x) < 15 and abs(self.elements[i].y + self.elements[i].height // 4 - y) < 15:
-                            print("i1")
-                        if self.elements[i].element_type != ElementTypes.NOT and abs(self.elements[i].x - x) < 15 and \
-                                abs(self.elements[i].y + 3 * self.elements[i].height // 4 - y) < 15:
-                            print("i2")
-                        if abs(self.elements[i].x + self.elements[i].width - x) < 15 and \
-                            abs(self.elements[i].y + self.elements[i].height // 4 - y) < 15:
-                            print("o")
-                    else:
-                        # Select element
-                        if self.selected_element > -1:
-                            self.elements[self.selected_element].state = ElementState.DEFAULT
-                        self.selected_element = i
-                        self.elements[self.selected_element].state = ElementState.CHOOSING
+                    # Select element
+                    if self.selected_element > -1:
+                        self.elements[self.selected_element].state = ElementState.DEFAULT
+                    self.selected_element = i
+                    self.elements[self.selected_element].state = ElementState.CHOOSING
                     is_find = True
+                if is_find:
                     break
 
-        if not is_find and self.selected_element > -1 and not self.is_ctrl:
+        # If click to air: remove selection.
+        if not self.is_ctrl and not is_find and self.selected_element > -1:
             self.elements[self.selected_element].state = ElementState.DEFAULT
             self.selected_element = -1
 
+        # Change the offset of the click relative to the object to move it correct.
         if self.selected_element > -1:
             self.selected_element_dpos[0] = a0.x() - self.elements[self.selected_element].x
             self.selected_element_dpos[1] = a0.y() - self.elements[self.selected_element].y
+
         self.repaint()
         super().mousePressEvent(a0)
 
