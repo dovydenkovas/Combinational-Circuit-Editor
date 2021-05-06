@@ -38,31 +38,16 @@ class Circuit(QWidget):
         for element in self.elements:
             if element is not None:
                 element.draw(qp)
-                # Draw lines
-                # if element.connections["i1"] > -1:
-                #     qp.drawLine(
-                #         self.elements[element.connections["i1"]].x + self.elements[element.connections["i1"]].width,
-                #         self.elements[element.connections["i1"]].y + self.elements[
-                #             element.connections["i1"]].height // 4,
-                #         element.x,
-                #         element.y + element.height // 4, )
-                # if element.connections["i2"] > -1:
-                #     qp.drawLine(
-                #         self.elements[element.connections["i2"]].x + self.elements[element.connections["i2"]].width,
-                #         self.elements[element.connections["i2"]].y + self.elements[
-                #             element.connections["i2"]].height // 4,
-                #         element.x,
-                #         element.y + 3 * element.height // 4)
                 if self.is_ctrl:
                     qp.drawImage(element.x - 15, element.y + element.height // 4 - 15,
-                                 self.add_connection_img if element.connections[
-                                                                "i1"] == -1 else self.rem_connection_img)
+                                 self.add_connection_img if element.connections["i1"] == -1
+                                 else self.rem_connection_img)
                     qp.drawImage(element.x + element.width - 15, element.y + element.height // 4 - 15,
                                  self.add_connection_img if element.connections["o"] == -1 else self.rem_connection_img)
                     if element.element_type != ElementTypes.NOT:
                         qp.drawImage(element.x - 15, element.y + 3 * element.height // 4 - 15,
-                                     self.add_connection_img if element.connections[
-                                                                    "i2"] == -1 else self.rem_connection_img)
+                                     self.add_connection_img if element.connections["i2"] == -1
+                                     else self.rem_connection_img)
         for line in self.lines:
             if line is not None:
                 id_1 = line.elements[0]
@@ -80,7 +65,7 @@ class Circuit(QWidget):
     def add_connection(self, id1, port1, id2, port2):
         is_added = False
         line = Line(id1, id2, port1, port2)
-        line_id = len(self.lines) - 1
+        line_id = len(self.lines)
 
         for i in range(len(self.lines)):
             if self.lines[i] is None:
@@ -97,13 +82,35 @@ class Circuit(QWidget):
 
     def remove_connection(self, element_id, port):
         """ Delete line between elements """
-        line_id = self.elements[element_id].connections[port]
-        id = self.lines[line_id].elements[0]
-        second_element_id = id if id != element_id else self.lines[line_id].elements[1]
-        second_element_port = self.lines[line_id].ports[0] if id != element_id else self.lines[line_id].ports[1]
-        self.elements[element_id].connections[port] = -1
-        self.elements[second_element_id].connections[second_element_port] = -1
-        self.lines[line_id] = None
+        if element_id != -1 and self.elements[element_id] is not None:  # if id is valid
+            line_id = self.elements[element_id].connections[port]  # get line id
+            if self.lines[line_id] is not None:
+                id = self.lines[line_id].elements[0]
+                second_element_id = id if id != element_id else self.lines[line_id].elements[1]
+                second_element_port = self.lines[line_id].ports[0] if id != element_id else self.lines[line_id].ports[1]
+                self.elements[element_id].connections[port] = -1
+                self.elements[second_element_id].connections[second_element_port] = -1
+                self.lines[line_id] = None
+        self.repaint()
+
+    def add_element(self, element_type):
+        is_added = False
+        for i in range(len(self.elements)):
+            if self.elements[i] is None:
+                self.elements[i] = Element(element_type, 20, 20)
+                is_added = True
+                break
+        if not is_added:
+            self.elements.append(Element(element_type, 20, 20))
+        self.repaint()
+
+    def remove_element(self, id: int):
+        self.remove_connection(id, 'i1')
+        self.remove_connection(id, 'i2')
+        self.remove_connection(id, 'o')
+        self.elements[id] = None
+        self.selected_element = -1
+        self.repaint()
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
         """ Check for trying select object or create/remove connection. """
@@ -115,17 +122,26 @@ class Circuit(QWidget):
                     # Check for add or remove connection
                     if abs(self.elements[i].x - x) < 15 and abs(self.elements[i].y + self.elements[i].height // 4 - y) < 15:
                         # input 1
-                        print("i1")
+                        if self.elements[i].connections['i1'] != -1:
+                            self.remove_connection(i, 'i1')
+                        else:
+                            print("create connection from i1")
                         is_find = True
                     if self.elements[i].element_type != ElementTypes.NOT and abs(self.elements[i].x - x) < 15 and \
                             abs(self.elements[i].y + 3 * self.elements[i].height // 4 - y) < 15:
                         # input 2
-                        print("i2")
+                        if self.elements[i].connections['i2'] != -1:
+                            self.remove_connection(i, 'i2')
+                        else:
+                            print("create connection from i2")
                         is_find = True
                     if abs(self.elements[i].x + self.elements[i].width - x) < 15 and \
                         abs(self.elements[i].y + self.elements[i].height // 4 - y) < 15:
                         # output
-                        print("o")
+                        if self.elements[i].connections['o'] != -1:
+                            self.remove_connection(i, 'o')
+                        else:
+                            print("create connection from o")
                         is_find = True
                 elif self.elements[i].x <= x <= self.elements[i].x + self.elements[i].width and \
                         self.elements[i].y <= y <= self.elements[i].y + self.elements[i].height:
@@ -164,16 +180,7 @@ class Circuit(QWidget):
         if a0.key() == QtCore.Qt.Key_Delete:
             # Delete selected element
             if self.selected_element > -1:
-                i = self.selected_element
-                if self.elements[i].connections['i1'] != -1:
-                    self.remove_connection(self.selected_element, 'i1')
-                if self.elements[i].connections['i2'] != -1:
-                    self.remove_connection(self.selected_element, 'i2')
-                if self.elements[i].connections['o'] != -1:
-                    self.remove_connection(self.selected_element, 'o')
-                self.elements[i] = None
-                self.selected_element = -1
-                self.repaint()
+                self.remove_element(self.selected_element)
 
         elif a0.key() == QtCore.Qt.Key_Control:
             self.is_ctrl = True
@@ -185,17 +192,6 @@ class Circuit(QWidget):
             self.is_ctrl = False
         self.repaint()
         super().keyPressEvent(a0)
-
-    def add_element(self, element_type):
-        is_added = False
-        for i in range(len(self.elements)):
-            if self.elements[i] is None:
-                self.elements[i] = Element(element_type, 20, 20)
-                is_added = True
-                break
-        if not is_added:
-            self.elements.append(Element(element_type, 20, 20))
-        self.repaint()
 
 
 class MainWindow(QMainWindow):
