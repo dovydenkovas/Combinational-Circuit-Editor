@@ -37,7 +37,12 @@ class Element:
         self.y = y
         self.state = ElementState.DEFAULT
 
-        self.connections = {"i1": -1, "i2": -1, "o": -1}
+        if element_type == ElementTypes.INPUT:
+            self.connections = {'o': -1}
+        elif element_type == ElementTypes.NOT:
+            self.connections = {'i1': -1,'o': -1}
+        else:
+            self.connections = {'i1': -1, 'i2': -1, 'o': -1}
 
         if element_type == ElementTypes.INPUT:
             self.width = 30
@@ -56,7 +61,18 @@ class Element:
         """ Calculate port position """
         point = [0, 0]
         point[0] = self.x if 'i' in port else self.x + self.width
-        point[1] = self.y + self.height // 4 * (3 if '2' in port else 1)
+        if self.element_type == ElementTypes.INPUT:
+            point[1] = self.y + self.height // 2
+        else:
+            point[1] = self.y + self.height // 4 * (3 if '2' in port else 1)
         return point
 
+    def is_clicked(self, x, y):
+        return self.x <= x <= self.x + self.width and self.y <= y <= self.y + self.height
 
+
+class Line:
+    def __init__(self, element_1, element_2, port_1, port_2):
+        self.elements = [element_1, element_2]
+        self.ports = [port_1, port_2]
+        self.is_active = False
