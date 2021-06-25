@@ -21,6 +21,11 @@ class Circuit(QWidget):
         self.add_connection_img = QImage("images/add_connection.png")
         self.rem_connection_img = QImage("images/rem_connection.png")
         self.is_mouse_pressed = False
+        self.new_line = {"id1": None,
+                         "port1": None,
+                         "id2": None,
+                         "port2": None
+                         }
 
         # Example:
         self.add_element(ElementTypes.INPUT, 60, 100)
@@ -80,6 +85,11 @@ class Circuit(QWidget):
         self.selected_element = -1
         self.repaint()
 
+    def draw_line(self, x1, y1, x2, y2, qp):
+        qp.drawLine(x1, y1, (x1 + x2) // 2, y1)
+        qp.drawLine((x1 + x2) // 2, y1, (x1 + x2) // 2, y2)
+        qp.drawLine((x1 + x2) // 2, y2, x2, y2)
+
     def paintEvent(self, a0: QPaintEvent) -> None:
         """ Draw elements. """
         qp = QPainter()
@@ -88,16 +98,9 @@ class Circuit(QWidget):
         qp.setBackground(QBrush(QColor(255, 255, 255)))
         for line in self.lines:
             if line is not None:
-                id_1 = line.elements[0]
-                port_1 = line.ports[0]
-                point_1 = self.elements[id_1].get_connection_point(port_1)
-
-                id_2 = line.elements[1]
-                port_2 = line.ports[1]
-                point_2 = self.elements[id_2].get_connection_point(port_2)
-
-                qp.drawLine(*point_1, point_1[0], point_2[1])
-                qp.drawLine(point_1[0], point_2[1], *point_2)
+                point_1 = self.elements[line.elements[0]].get_connection_point(line.ports[0])
+                point_2 = self.elements[line.elements[1]].get_connection_point(line.ports[1])
+                self.draw_line(*point_1, *point_2, qp)
 
         for element in self.elements:
             if element is not None:
@@ -127,7 +130,15 @@ class Circuit(QWidget):
                             if self.elements[i].connections[port] != -1:
                                  self.remove_connection(i, port)
                             else:
-                                print(f"create connection from {port}")
+                                if self.new_line["id1"] is not None:
+                                    self.new_line["id2"] = i
+                                    self.new_line["port2"] = port
+                                    self.add_connection(**self.new_line)
+                                    self.new_line = {item: None for item in self.new_line}
+                                else:
+                                    self.new_line["id1"] = i
+                                    self.new_line["port1"] = port
+                                    
                             is_find = True
                 elif self.elements[i].is_clicked(x, y):
                     # Select element
