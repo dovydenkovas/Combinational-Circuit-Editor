@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, Qt
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QPainter, QColor, QBrush, QMouseEvent, QPaintEvent
 
@@ -13,6 +13,8 @@ class Circuit(QWidget):
 
     def __init__(self):
         super(Circuit, self).__init__()
+        self.setAttribute(Qt.Qt.WA_StyledBackground, True)
+        self.setStyleSheet('background-color: white;')
         self.elements = []
         self.lines = []
         self.selected_element = -1
@@ -26,27 +28,26 @@ class Circuit(QWidget):
                          "id2": None,
                          "port2": None
                          }
-
-        # Example:
-        self.add_element(ElementTypes.INPUT, 60, 100)
-        self.add_element(ElementTypes.INPUT, 60, 200)
-        self.add_element(ElementTypes.AND, 250, 120)
-        self.add_connection(0, "o", 2, "i1")
-        self.add_connection(1, "o", 2, "i2")
         self.setMouseTracking(True)
 
+        # # Example:
+        # self.add_element(ElementTypes.INPUT, 60, 100)
+        # self.add_element(ElementTypes.INPUT, 60, 200)
+        # self.add_element(ElementTypes.AND, 250, 120)
+        # self.add_connection(0, "o", 2, "i1")
+        # self.add_connection(1, "o", 2, "i2")
+
+
     def add_connection(self, id1, port1, id2, port2):
-        is_added = False
         line = Line(id1, id2, port1, port2)
-        line_id = len(self.lines)
 
         for i in range(len(self.lines)):
             if self.lines[i] is None:
                 self.lines[i] = line
                 line_id = i
-                is_added = True
                 break
-        if not is_added:
+        else:
+            line_id = len(self.lines)
             self.lines.append(line)
 
         self.elements[id1].connections[port1] = line_id
@@ -55,32 +56,43 @@ class Circuit(QWidget):
 
     def remove_connection(self, element_id, port):
         """ Delete line between elements """
-        if element_id != -1 and self.elements[element_id] is not None:  # if id is valid
-            line_id = self.elements[element_id].connections[port]  # get line id
-            if self.lines[line_id] is not None:
-                id = self.lines[line_id].elements[0]
-                second_element_id = id if id != element_id else self.lines[line_id].elements[1]
-                second_element_port = self.lines[line_id].ports[0] if id != element_id else self.lines[line_id].ports[1]
-                self.elements[element_id].connections[port] = -1
-                self.elements[second_element_id].connections[second_element_port] = -1
-                self.lines[line_id] = None
+        if element_id == -1 or element_id >= len(self.elements) or \
+           self.elements[element_id] is None:
+            return
+
+        line_id = self.elements[element_id].connections[port]  # get line id
+        if line_id < 0 or line_id >= len(self.lines) or self.lines[line_id] is None:
+            return
+
+        id = self.lines[line_id].elements[0]
+        if id != element_id:
+            second_element_id = id
+            second_element_port = self.lines[line_id].ports[0]
+        else:
+            self.lines[line_id].elements[1]
+            second_element_port = self.lines[line_id].ports[1]
+
+        self.elements[element_id].connections[port] = -1
+        self.elements[second_element_id].connections[second_element_port] = -1
+        self.lines[line_id] = None
         self.repaint()
 
     def add_element(self, element_type, x=20, y=20):
-        is_added = False
         for i in range(len(self.elements)):
             if self.elements[i] is None:
                 self.elements[i] = Element(element_type, x, y)
-                is_added = True
                 break
-        if not is_added:
+        else:
             self.elements.append(Element(element_type, x, y))
         self.repaint()
 
     def remove_element(self, id: int):
-        self.remove_connection(id, 'i1')
-        self.remove_connection(id, 'i2')
         self.remove_connection(id, 'o')
+        if self.elements[id].element_type != ElementTypes.INPUT:
+            self.remove_connection(id, 'i1')
+            if self.elements[id].element_type != ElementTypes.NOT:
+                self.remove_connection(id, 'i2')
+
         self.elements[id] = None
         self.selected_element = -1
         self.repaint()
@@ -138,7 +150,6 @@ class Circuit(QWidget):
                                 else:
                                     self.new_line["id1"] = i
                                     self.new_line["port1"] = port
-                                    
                             is_find = True
                 elif self.elements[i].is_clicked(x, y):
                     # Select element
@@ -185,6 +196,8 @@ class Circuit(QWidget):
 
     def keyReleaseEvent(self, a0: QtGui.QKeyEvent) -> None:
         if a0.key() == QtCore.Qt.Key_Control:
+            self.new_line = {item: None for item in self.new_line}
             self.is_ctrl = False
+
         self.repaint()
         super().keyPressEvent(a0)
