@@ -6,8 +6,8 @@ Combinational Circuit Editor is a simulator to create and run logical circuits w
 ## Instalation
 * Install python3.8 or later. (Most likely it already installed for Linux, for other OS download from here: *https://www.python.org/downloads*)
 * Create virtual enviroment: `python3 -m venv venv`
-* Activate virtual enviroment:
-    For Linux and MacOS: `source venv/bin/activate`
+* Activate virtual enviroment: <br>
+    For Linux and MacOS: `source venv/bin/activate` <br>
     For Windows: `venv/bin/activate.bat`
 * Install requirements: `pip3 install -r requirements.txt`)
 * Run: `python3 circuit_editor`
