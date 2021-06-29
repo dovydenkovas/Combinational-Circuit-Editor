@@ -144,8 +144,7 @@ class MainWindow(QMainWindow):
         super().keyPressEvent(a0)
 
 
-if __name__ == "__main__":
-    boolean_editor = QApplication(sys.argv)
-    boolean_editor.setWindowIcon(QIcon("images/run.png"))
-    window = MainWindow()
-    boolean_editor.exec()
+boolean_editor = QApplication(sys.argv)
+boolean_editor.setWindowIcon(QIcon("images/run.png"))
+window = MainWindow()
+boolean_editor.exec()
